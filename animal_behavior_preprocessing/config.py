@@ -25,6 +25,7 @@ save_folder: str
 from pathlib import Path
 from itertools import product
 import numpy as np
+from filterpy.common import Q_discrete_white_noise
 
 ################################# File System ##################################
 
@@ -84,6 +85,7 @@ corner_marker_idx = np.arange(12, 16)
 corner_destination = np.array([[5.7, 3], [0, 3], [5.7, 0], [0, 0]]) * 10.0  # in mm
 front_marker_idx = np.arange(7, 12)
 back_marker_idx = np.arange(7)
+body_marker_idx = np.arange(12)
 
 ################################ Median Filter #################################
 
@@ -98,3 +100,18 @@ kal_N_ensemble = 10
 kal_process_variance = 0.01  # mm squared
 kal_dim_z = 1  # one coordinate at a time
 kal_dim_x = 2  # 2, 3 or 4
+
+kal_P = np.eye(kal_dim_x) * 100.0
+kal_F = np.eye(kal_dim_x)
+for n in range(0, kal_dim_x - kal_dim_z):
+    idx = np.arange(kal_dim_x - kal_dim_z - n, dtype=int)
+    kal_F[idx, (n + 1) * kal_dim_z + idx] = 1.0 / np.math.factorial(n + 1)
+kal_hx = lambda x: x[0]
+kal_fx = lambda x, dt: np.dot(kal_F, x)
+kal_Q = Q_discrete_white_noise(
+    dim=kal_dim_x,
+    dt=kal_dt,
+    var=kal_process_variance,
+    block_size=kal_dim_z,
+    order_by_dim=False,
+)

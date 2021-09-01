@@ -70,7 +70,7 @@ def task_get_kalman_filter():
         target_pickle_path = config.kal_path / f"kal_xy_{pickle_end}"
         yield {
             "name": name,
-            "file_dep": list(dep_pickle_paths.values),
+            "file_dep": list(dep_pickle_paths.values()),
             "targets": [target_pickle_path],
             "actions": [
                 (

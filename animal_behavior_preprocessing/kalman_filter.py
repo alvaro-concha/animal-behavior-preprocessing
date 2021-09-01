@@ -2,9 +2,9 @@
 
 Create folders, write and read pickles, get spreadsheet paths and load data.
 """
+import multiprocessing as mp
 import numpy as np
 from filterpy.kalman import EnsembleKalmanFilter
-from filterpy.common import Q_discrete_white_noise
 from cv2 import perspectiveTransform
 from utilities import read_pickle, write_pickle
 import config
@@ -60,52 +60,80 @@ def get_combined_perspective_xys_lhs(dep_pickle_paths):
     return xys, lhs
 
 
-class EnKF:
+def single_coordinate_kalman_filter(coordinate, variance):
     """
-    Ensemble Kalman filter over measurements zs, with variance Rs.
+    Ensemble Kalman filter over single coordinate.
+
+    Parameters
+    ----------
+    coordinate: ndarray
+        Single coordinate time series to filter
+
+    variance: ndarray
+        Variance of this coordinate time series
+
+    Returns
+    -------
+    filtered_coordinate: ndarray
+        Filtered single coordinate time series
     """
+    x_0 = np.pad(
+        [coordinate[0]],
+        (0, config.kal_dim_x - config.kal_dim_z),
+        "constant",
+        constant_values=1.0,
+    )
+    ensemble_kalman_filter = EnsembleKalmanFilter(
+        x=x_0,
+        P=config.kal_P,
+        dim_z=config.kal_dim_z,
+        dt=config.kal_dt,
+        N=config.kal_N_ensemble,
+        hx=config.kal_hx,
+        fx=config.kal_fx,
+    )
+    ensemble_kalman_filter.Q = config.kal_Q
+    filtered_coordinate = []
+    for coord, var in zip(coordinate, variance):
+        ensemble_kalman_filter.predict()
+        ensemble_kalman_filter.update(z=[coord], R=var)
+        filtered_coordinate.append(config.kal_hx(ensemble_kalman_filter.x))
+    return np.array(filtered_coordinate)
 
-    def __init__(self, dim_z=1, dim_x=2, dt=1, N=10, var=0.01):
-        self.dim_z = dim_z
-        self.dim_x = dim_x
-        self.dt = dt
-        self.N = N
-        self.var = var
-        self.P = np.eye(self.dim_x) * 100.0
-        self.F = np.eye(self.dim_x)
-        for n in range(0, self.dim_x - self.dim_z):
-            idx = np.arange(self.dim_x - self.dim_z - n, dtype=int)
-            self.F[idx, (n + 1) * self.dim_z + idx] = 1.0 / np.math.factorial(n + 1)
-        self.hx = lambda x: x[0]
-        self.fx = lambda x, dt: np.dot(self.F, x)
-        self.Q = Q_discrete_white_noise(
-            dim=self.dim_x,
-            dt=self.dt,
-            var=self.var,
-            block_size=self.dim_z,
-            order_by_dim=False,
-        )
 
-    def __call__(self, zs, Rs):
-        x0 = np.pad(
-            [zs[0]], (0, self.dim_x - self.dim_z), "constant", constant_values=1.0
+def parallel_kalman_filter(xys, lhs):
+    """
+    Apply parallelized Kalman filter.
+
+    Parameters
+    ----------
+    xys: ndarray
+        Combined X-Y coordinates from both cameras in same perspective
+    lhs: ndarray
+        Combined likelihoods
+
+    Returns
+    -------
+    xys: ndarray
+        Kalman filtered X-Y coordinates
+    """
+    coordinates = xys[:, config.body_marker_idx].reshape((xys.shape[0], -1))
+    variances = np.repeat(lhs, 2, axis=1)
+    variances = (
+        config.kal_sigma_measurement / (variances + config.kal_epsilon_lh)
+    ) ** 2
+    with mp.Pool(mp.cpu_count()) as pool:
+        results = pool.starmap(
+            single_coordinate_kalman_filter,
+            [(coordinates[:, j], variances[:, j]) for j in range(coordinates.shape[1])],
         )
-        f = EnsembleKalmanFilter(
-            x=x0,
-            P=self.P,
-            dim_z=self.dim_z,
-            dt=self.dt,
-            N=self.N,
-            hx=self.hx,
-            fx=self.fx,
-        )
-        f.Q = self.Q
-        filtered_signal = []
-        for z, R in zip(zs, Rs):
-            f.predict()
-            f.update(z=[z], R=R)
-            filtered_signal.append(self.hx(f.x))
-        return np.array(filtered_signal)
+        pool.close()
+        pool.join()
+    xys[:, config.body_marker_idx] = np.column_stack(results).reshape(
+        (xys.shape[0], -1, 2)
+    )
+
+    return xys
 
 
 def get_kalman_filter(dep_pickle_paths, target_pickle_path):
@@ -122,8 +150,5 @@ def get_kalman_filter(dep_pickle_paths, target_pickle_path):
         Paths of target pickle file to save
     """
     xys, lhs = get_combined_perspective_xys_lhs(dep_pickle_paths)
-    kalman_filter = EnKF(
-        dim_z=dim_z, dim_x=dim_x, dt=dt, N=N_ensemble, var=process_variance
-    )
-
+    xys = parallel_kalman_filter(xys, lhs)
     write_pickle(xys, target_pickle_path)
