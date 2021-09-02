@@ -1,6 +1,7 @@
-"""General data management functions.
+"""Kalman filter of combined front and back camera's motion tracking.
 
-Create folders, write and read pickles, get spreadsheet paths and load data.
+Combine front and back body-part markers, in the same perspective.
+Apply parallelized Ensemble Kalman filter to combined coordinates. Save results.
 """
 import multiprocessing as mp
 import numpy as np
@@ -10,19 +11,21 @@ from utilities import read_pickle, write_pickle
 import config
 
 
-def combine_cameras(front_xys, front_lhs, back_xys, back_lhs):
+def get_combined_cameras_coordinates_likelihoods(
+    front_xys, front_lhs, back_xys, back_lhs
+):
     """
     Combine same perspective front and back cameras.
     Keep shortest frame number when in conflict.
 
     Parameters
     ----------
-    {front, back}_{xys, lhs}: ndarray
+    {front, back}_{xys, lhs} : ndarray
         Front or back X-Y coordinates or likelihoods
 
     Returns
     -------
-    (xys, lhs): tuple of ndarray
+    (xys, lhs) : tuple of ndarray
         Combined coords and likelihoods
     """
     num_frames = np.minimum(len(front_xys), len(back_xys))
@@ -34,18 +37,18 @@ def combine_cameras(front_xys, front_lhs, back_xys, back_lhs):
     return xys, lhs
 
 
-def get_combined_perspective_xys_lhs(dep_pickle_paths):
+def get_same_perspective_coordinates_likelihoods(dep_pickle_paths):
     """
     Combines front and back cameras, using the same perspective.
 
     Parameters
     ----------
-    dep_pickle_paths: dict of pathlib.Path
+    dep_pickle_paths : dict of pathlib.Path
         Path of dependency pickle files to read
 
     Returns
     -------
-    (xys, lhs): tuple of ndarray
+    (xys, lhs) : tuple of ndarray
         Combined coords and likelihoods
     """
     front_xys = read_pickle(dep_pickle_paths["front_med_xy"])
@@ -56,25 +59,27 @@ def get_combined_perspective_xys_lhs(dep_pickle_paths):
     back_perspective_matrix = read_pickle(dep_pickle_paths["back_perspective"])
     front_xys = perspectiveTransform(front_xys, front_perspective_matrix)
     back_xys = perspectiveTransform(back_xys, back_perspective_matrix)
-    xys, lhs = combine_cameras(front_xys, front_lhs, back_xys, back_lhs)
+    xys, lhs = get_combined_cameras_coordinates_likelihoods(
+        front_xys, front_lhs, back_xys, back_lhs
+    )
     return xys, lhs
 
 
-def single_coordinate_kalman_filter(coordinate, variance):
+def get_single_coordinate_kalman_filter(coordinate, variance):
     """
     Ensemble Kalman filter over single coordinate.
 
     Parameters
     ----------
-    coordinate: ndarray
+    coordinate : ndarray
         Single coordinate time series to filter
 
-    variance: ndarray
+    variance : ndarray
         Variance of this coordinate time series
 
     Returns
     -------
-    filtered_coordinate: ndarray
+    filtered_coordinate : ndarray
         Filtered single coordinate time series
     """
     x_0 = np.pad(
@@ -101,20 +106,20 @@ def single_coordinate_kalman_filter(coordinate, variance):
     return np.array(filtered_coordinate)
 
 
-def parallel_kalman_filter(xys, lhs):
+def get_parallel_kalman_filter(xys, lhs):
     """
     Apply parallelized Kalman filter.
 
     Parameters
     ----------
-    xys: ndarray
+    xys : ndarray
         Combined X-Y coordinates from both cameras in same perspective
-    lhs: ndarray
+    lhs : ndarray
         Combined likelihoods
 
     Returns
     -------
-    xys: ndarray
+    xys : ndarray
         Kalman filtered X-Y coordinates
     """
     coordinates = xys[:, config.body_marker_idx].reshape((xys.shape[0], -1))
@@ -124,7 +129,7 @@ def parallel_kalman_filter(xys, lhs):
     ) ** 2
     with mp.Pool(mp.cpu_count()) as pool:
         results = pool.starmap(
-            single_coordinate_kalman_filter,
+            get_single_coordinate_kalman_filter,
             [(coordinates[:, j], variances[:, j]) for j in range(coordinates.shape[1])],
         )
         pool.close()
@@ -144,11 +149,11 @@ def get_kalman_filter(dep_pickle_paths, target_pickle_path):
 
     Parameters
     ----------
-    dep_pickle_paths: dict of pathlib.Path
-        Path of dependency pickle files to read
-    target_pickle_path: pathlib.Path
-        Paths of target pickle file to save
+    dep_pickle_paths : dict of pathlib.Path
+        Paths of dependency pickle files to read
+    target_pickle_path : pathlib.Path
+        Path of target pickle file to save
     """
-    xys, lhs = get_combined_perspective_xys_lhs(dep_pickle_paths)
-    xys = parallel_kalman_filter(xys, lhs)
+    xys, lhs = get_same_perspective_coordinates_likelihoods(dep_pickle_paths)
+    xys = get_parallel_kalman_filter(xys, lhs)
     write_pickle(xys, target_pickle_path)

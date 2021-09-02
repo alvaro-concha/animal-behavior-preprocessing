@@ -1,6 +1,8 @@
-"""General data management functions.
+"""Spreadsheet handling, median filter and perspective transform matrix.
 
-Create folders, write and read pickles, get spreadsheet paths and load data.
+Find, open and read motion tracking spreadsheets (CSV or Excel files).
+Apply median transform to X-Y coordinates and likelihoods of body-part markers.
+Compute perspective transform matrices of front and back cameras. Save results.
 """
 import re
 import pandas as pd
@@ -19,11 +21,11 @@ def get_spreadsheet_path(spreadsheets, key, target_pickle_path):
 
     Parameters
     ----------
-    spreadsheets: list of pathlib.Path
+    spreadsheets : list of pathlib.Path
         Paths of all the body-part tracking spreadsheets
-    key: tuple
+    key : tuple
         Data preprocessing subject key
-    target_pickle_path: pathlib.Path
+    target_pickle_path : pathlib.Path
         Path of target pickle to save
     """
     for file in spreadsheets:
@@ -32,21 +34,26 @@ def get_spreadsheet_path(spreadsheets, key, target_pickle_path):
             return
 
 
-def read_spreadsheet_path(file):
+def get_coordinates_likelihoods_from_spreadsheet_path(file):
     """
     Tries to read file as CSV or Excel, using pandas.
 
     Parameters
     ----------
-    file: pathlib.Path
+    file : pathlib.Path
         Path to file to read
 
     Returns
     -------
-    xys: ndarray
+    xys : ndarray
         X-Y coordinates from body-part tracking spreadsheet
-    lhs: ndarray
+    lhs : ndarray
         Likelihoods of body-part X-Y coordinates
+
+    Raises
+    ------
+    ValueError
+        If the file is not a CSV or an Excel compatible spreadsheet.
     """
     kwargs = {"skiprows": config.spr_skiprows}
     xy_kwargs = {**kwargs, "usecols": config.spr_xy_columns}
@@ -66,16 +73,16 @@ def get_median_filter(xys, lhs):
 
     Parameters
     ----------
-    xys: ndarray
+    xys : ndarray
         X-Y coordinates from body-part tracking spreadsheet
-    lhs: ndarray
+    lhs : ndarray
         Likelihoods of body-part X-Y coordinates
 
     Returns
     -------
-    med_xys: ndarray
+    med_xys : ndarray
         Reshaped and filetered X-Y coordinates
-    med_lhs: ndarray
+    med_lhs : ndarray
         Filtered likelihoods
     """
     med_xys = medfilt(xys, kernel_size=(config.med_win, 1)).reshape(
@@ -91,12 +98,12 @@ def get_perspective_matrix(xys):
 
     Parameters
     ----------
-    xys: ndarray
+    xys : ndarray
         Reshaped X-Y coordinates
 
     Returns
     -------
-    perspective_matrix: ndarray
+    perspective_matrix : ndarray
         Perspective transform matrix
     """
     corner_source = np.median(xys[:, config.corner_marker_idx, :], axis=0)
@@ -114,13 +121,13 @@ def get_median_filter_perspective(dep_pickle_path, target_pickle_paths):
 
     Parameters
     ----------
-    dep_pickle_path: pathlib.Path
+    dep_pickle_path : pathlib.Path
         Path of dependency pickle file to read
-    target_pickle_paths: dict of pathlib.Path
+    target_pickle_paths : dict of pathlib.Path
         Paths of target pickle files to save
     """
     file = read_pickle(dep_pickle_path)
-    xys, lhs = read_spreadsheet_path(file)
+    xys, lhs = get_coordinates_likelihoods_from_spreadsheet_path(file)
     xys, lhs = get_median_filter(xys, lhs)
     perspective_matrix = get_perspective_matrix(xys)
     write_pickle(xys, target_pickle_paths["med_xy"])

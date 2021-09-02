@@ -13,9 +13,9 @@ def write_pickle(obj, path):
 
     Parameters
     ----------
-    obj: pickable object
+    obj : pickable object
         Object to be pickled
-    path: pathlib.Path
+    path : pathlib.Path
         Path to pickle file to be saved
     """
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -29,12 +29,12 @@ def read_pickle(path):
 
     Parameters
     ----------
-    path: pathlib.Path
+    path : pathlib.Path
         Path to pickle file to be opened
 
     Returns
     -------
-    obj: pickable object
+    obj : pickable object
         Unpickled object
     """
     with path.open("rb") as file:

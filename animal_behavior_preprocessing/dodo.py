@@ -1,14 +1,20 @@
 """Dodo go brrr.
 
-Create folders, write and read pickles, get spreadsheet paths and load data.
+BRRRR.
 """
 import config
 from spreadsheet_handle import get_spreadsheet_path, get_median_filter_perspective
 from kalman_filter import get_kalman_filter
+from joint_angles import get_joint_angles_statistics
+from wavelet_spectra import get_wavelet_spectra
 
 
 def task_get_spreadsheet_path():
-    """Get spreadsheet path go brrr."""
+    """Spreadsheet handling.
+
+    Find, open and read motion tracking spreadsheets (CSV or Excel files).
+    Save spreadsheet paths.
+    """
     spreadsheets = [file for file in config.spr_path.glob("**/*") if file.is_file()]
     for key in config.preprocess_key_list:
         name = config.preprocess_subject_name.format(*key)
@@ -27,7 +33,12 @@ def task_get_spreadsheet_path():
 
 
 def task_get_median_filter_perspective():
-    """Get median filter and perspective matrix go brrr."""
+    """Median filter and perspective transform matrix.
+
+    Apply median transform to X-Y coords and likelihoods of body-part markers.
+    Compute perspective transform matrices of front and back cameras.
+    Save results.
+    """
     for key in config.preprocess_key_list:
         name = config.preprocess_subject_name.format(*key)
         pickle_end = name + ".pickle"
@@ -51,7 +62,12 @@ def task_get_median_filter_perspective():
 
 
 def task_get_kalman_filter():
-    """Get kalman filter go brrr."""
+    """Kalman filter of combined front and back camera's motion tracking.
+
+    Combine front and back body-part markers, in the same perspective.
+    Apply parallelized Ensemble Kalman filter to combined coordinates.
+    Save results.
+    """
     for key in config.key_list:
         name = config.subject_name.format(*key)
         pickle_end = name + ".pickle"
@@ -75,6 +91,56 @@ def task_get_kalman_filter():
             "actions": [
                 (
                     get_kalman_filter,
+                    [dep_pickle_paths, target_pickle_path],
+                )
+            ],
+        }
+
+
+def task_get_joint_angles_statistics():
+    """Computes joint angles and their statistics.
+
+    Computes new X-Y coords, with and additional mid-bottom-rotarod marker.
+    Computes joint angles defined by some select thruples of markers.
+    Computes number of frames, means and variances for each single angle."""
+    for key in config.key_list:
+        name = config.subject_name.format(*key)
+        pickle_end = name + ".pickle"
+        dep_pickle_path = config.kal_path / f"kal_xy_{pickle_end}"
+        target_pickle_paths = {
+            "ang": config.ang_path / f"ang_{pickle_end}",
+            "stat": config.ang_path / f"stat_{pickle_end}",
+        }
+        yield {
+            "name": name,
+            "file_dep": [dep_pickle_path],
+            "targets": list(target_pickle_paths.values()),
+            "actions": [
+                (
+                    get_joint_angles_statistics,
+                    [dep_pickle_path, target_pickle_paths],
+                )
+            ],
+        }
+
+
+def task_get_wavelet_spectra():
+    """Computes wavelet spectra of whitened joint angles."""
+    for key in config.key_list:
+        name = config.subject_name.format(*key)
+        pickle_end = name + ".pickle"
+        dep_pickle_paths = {
+            "ang": config.ang_path / f"ang_{pickle_end}",
+            "stat": config.ang_path / f"stat_{pickle_end}",
+        }
+        target_pickle_path = config.wav_path / f"wav_{pickle_end}"
+        yield {
+            "name": name,
+            "file_dep": [dep_pickle_paths],
+            "targets": list(target_pickle_path.values()),
+            "actions": [
+                (
+                    get_wavelet_spectra,
                     [dep_pickle_paths, target_pickle_path],
                 )
             ],
