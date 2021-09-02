@@ -48,6 +48,7 @@ import numpy as np
 from filterpy.common import Q_discrete_white_noise
 
 ################################# File System ##################################
+################################# Config Dodo ##################################
 
 abs_path = Path(__file__).parent.parent.parent.absolute()
 spr_path = abs_path / "Data/Spreadsheets"  # Original source spreadsheets
@@ -62,6 +63,7 @@ ani_path = abs_path / "Animations"  # Output animations
 fig_path = abs_path / "Figures"  # Output figures
 
 ################################ Subjetct Data #################################
+################################# Config Dodo ##################################
 
 mouse_list = [295, 297, 298, 329, 330]
 # mouse_list = [295]

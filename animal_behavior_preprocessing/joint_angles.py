@@ -119,3 +119,35 @@ def get_joint_angles_statistics(dep_pickle_path, target_pickle_paths):
     stats = get_statistics(angs)
     write_pickle(angs, target_pickle_paths["ang"])
     write_pickle(stats, target_pickle_paths["stat"])
+
+
+def get_global_statistics(dep_pickle_paths, target_pickle_path):
+    """
+    Computes joint angles.
+    Computes number of frames, means and variances for each single joint angle.
+    Saves results.
+
+    Parameters
+    ----------
+    dep_pickle_paths : dict of pathlib.Path
+        Paths of dependency pickle files to read
+    target_pickle_path : pathlib.Path
+        Path of target pickle file to save
+    """
+    num_frames_list, mean_list, var_list = [], [], []
+    for file in dep_pickle_paths:
+        num_frames, mean, var = read_pickle(file)
+        num_frames_list.append(num_frames)
+        mean_list.append(mean)
+        var_list.append(var)
+    num_frames_list = np.array(num_frames_list)[:, np.newaxis]
+    mean_list = np.array(mean_list)
+    var_list = np.array(var_list)
+    num_frames_total = num_frames_list.sum()
+    mean_global = (mean_list * num_frames_list).sum(axis=0) / num_frames_total
+    var_global = (
+        (num_frames_list - 1) * (var_list ** 2)
+        + num_frames_list * ((mean_list - mean_global) ** 2)
+    ).sum(axis=0) / (num_frames_total - 1)
+    stats_global = (num_frames_total, mean_global, var_global)
+    write_pickle(stats_global, target_pickle_path)
