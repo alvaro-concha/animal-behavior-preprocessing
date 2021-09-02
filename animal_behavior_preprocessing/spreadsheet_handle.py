@@ -2,7 +2,7 @@
 
 Find, open and read motion tracking spreadsheets (CSV or Excel files).
 Apply median transform to X-Y coordinates and likelihoods of body-part markers.
-Compute perspective transform matrices of front and back cameras. Save results.
+Compute perspective transform matrices of front and back cameras. Saves results.
 """
 import re
 import pandas as pd

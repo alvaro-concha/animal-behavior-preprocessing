@@ -2,7 +2,7 @@
 
 Computes new X-Y coords, with and additional mid-bottom-rotarod marker.
 Computes joint angles defined by some select thruples of markers.
-Computes number of frames, means and variances for each single joint angle.
+Computes number of frames, means and variances of joint angles.
 """
 import numpy as np
 from utilities import read_pickle, write_pickle
@@ -123,8 +123,8 @@ def get_joint_angles_statistics(dep_pickle_path, target_pickle_paths):
 
 def get_global_statistics(dep_pickle_paths, target_pickle_path):
     """
-    Computes joint angles.
-    Computes number of frames, means and variances for each single joint angle.
+    Computes joint angles global statistics.
+    That is, total number of frames, global mean and variance.
     Saves results.
 
     Parameters

@@ -1,7 +1,7 @@
 """Kalman filter of combined front and back camera's motion tracking.
 
 Combine front and back body-part markers, in the same perspective.
-Apply parallelized Ensemble Kalman filter to combined coordinates. Save results.
+Apply parallelized Ensemble Kalman filter to combined coordinates. Saves results.
 """
 import multiprocessing as mp
 import numpy as np
@@ -67,7 +67,7 @@ def get_same_perspective_coordinates_likelihoods(dep_pickle_paths):
 
 def get_single_coordinate_kalman_filter(coordinate, variance):
     """
-    Ensemble Kalman filter over single coordinate.
+    Ensemble Kalman filter over a single coordinate.
 
     Parameters
     ----------
@@ -137,7 +137,6 @@ def get_parallel_kalman_filter(xys, lhs):
     xys[:, config.body_marker_idx] = np.column_stack(results).reshape(
         (xys.shape[0], -1, 2)
     )
-
     return xys
 
 

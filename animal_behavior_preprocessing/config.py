@@ -46,6 +46,7 @@ from pathlib import Path
 from itertools import product
 import numpy as np
 from filterpy.common import Q_discrete_white_noise
+from dyadic_frequencies import get_dyadic_frequencies
 
 ################################# File System ##################################
 ################################# Config Dodo ##################################
@@ -182,3 +183,22 @@ angle_marker_idx = [
 ]
 
 ############################### Wavelet Spectra ################################
+
+wav_f_sampling = 100.0
+wav_f_min = 0.1
+wav_f_min_mid = 0.5
+wav_f_max_mid = 4.0
+wav_f_max = wav_f_sampling / 2.0
+wav_num_channels_mid = 20
+wav_num_channels_low = 3
+wav_num_channels_high = 5
+wav_f_channels = np.concatenate(
+    [
+        get_dyadic_frequencies(wav_f_min, wav_f_min_mid, wav_num_channels_low)[:-1],
+        get_dyadic_frequencies(wav_f_min_mid, wav_f_max_mid, wav_num_channels_mid),
+        get_dyadic_frequencies(wav_f_max_mid, wav_f_max, wav_num_channels_high)[1:],
+    ]
+)
+wav_num_channels = len(wav_f_channels)
+wav_omega_0 = 10.0
+wav_dt = 1.0 / wav_f_sampling

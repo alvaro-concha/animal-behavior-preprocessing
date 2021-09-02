@@ -6,8 +6,7 @@ import config_dodo
 from spreadsheet_handle import get_spreadsheet_path, get_median_filter_perspective
 from kalman_filter import get_kalman_filter
 from joint_angles import get_joint_angles_statistics, get_global_statistics
-
-# from wavelet_spectra import get_wavelet_spectra
+from wavelet_spectra import get_wavelet_spectra
 
 
 def task_get_spreadsheet_path():
@@ -40,7 +39,7 @@ def task_get_median_filter_perspective():
 
     Apply median transform to X-Y coords and likelihoods of body-part markers.
     Compute perspective transform matrices of front and back cameras.
-    Save results.
+    Saves results.
     """
     for key in config_dodo.preprocess_key_list:
         name = config_dodo.preprocess_subject_name.format(*key)
@@ -69,7 +68,7 @@ def task_get_kalman_filter():
 
     Combine front and back body-part markers, in the same perspective.
     Apply parallelized Ensemble Kalman filter to combined coordinates.
-    Save results.
+    Saves results.
     """
     for key in config_dodo.key_list:
         name = config_dodo.subject_name.format(*key)
@@ -106,7 +105,9 @@ def task_get_joint_angles_statistics():
 
     Computes new X-Y coords, with and additional mid-bottom-rotarod marker.
     Computes joint angles defined by some select thruples of markers.
-    Computes number of frames, means and variances for each single angle."""
+    Computes number of frames, means and variances for each single angle.
+    Saves results.
+    """
     for key in config_dodo.key_list:
         name = config_dodo.subject_name.format(*key)
         pickle_end = name + ".pickle"
@@ -129,11 +130,11 @@ def task_get_joint_angles_statistics():
 
 
 def task_get_global_statistics():
-    """Computes global joint angles statistics.
+    """Computes joint angles global statistics.
 
-    Computes new X-Y coords, with and additional mid-bottom-rotarod marker.
-    Computes joint angles defined by some select thruples of markers.
-    Computes number of frames, means and variances for each single angle."""
+    That is, total number of frames, global mean and variance.
+    Saves results.
+    """
     dep_pickle_paths = []
     for key in config_dodo.key_list:
         name = config_dodo.subject_name.format(*key)
@@ -152,27 +153,32 @@ def task_get_global_statistics():
     }
 
 
-# def task_get_wavelet_spectra():
-#     """Computes wavelet spectra of whitened joint angles."""
-#     for key in config_dodo.key_list:
-#         name = config_dodo.subject_name.format(*key)
-#         pickle_end = name + ".pickle"
-#         dep_pickle_paths = {
-#             "ang": config_dodo.ang_path / f"ang_{pickle_end}",
-#             "stat": config_dodo.ang_path / f"stat_{pickle_end}",
-#         }
-#         target_pickle_path = config_dodo.wav_path / f"wav_{pickle_end}"
-#         yield {
-#             "name": name,
-#             "file_dep": [dep_pickle_paths],
-#             "targets": list(target_pickle_path.values()),
-#             "actions": [
-#                 (
-#                     get_wavelet_spectra,
-#                     [dep_pickle_paths, target_pickle_path],
-#                 )
-#             ],
-#         }
+def task_get_wavelet_spectra():
+    """Computes Morlet wavelet spectra of whitened joint angles.
+
+    Whitens joint angles using global mean and variance.
+    Computes parallelized Morlet wavelet transform.
+    Saves results.
+    """
+    for key in config_dodo.key_list:
+        name = config_dodo.subject_name.format(*key)
+        pickle_end = name + ".pickle"
+        dep_pickle_paths = {
+            "ang": config_dodo.ang_path / f"ang_{pickle_end}",
+            "stat": config_dodo.ang_path / "stat_global.pickle",
+        }
+        target_pickle_path = config_dodo.wav_path / f"wav_{pickle_end}"
+        yield {
+            "name": name,
+            "file_dep": list(dep_pickle_paths.values()),
+            "targets": [target_pickle_path],
+            "actions": [
+                (
+                    get_wavelet_spectra,
+                    [dep_pickle_paths, target_pickle_path],
+                )
+            ],
+        }
 
 
 # ##################################### MAIN #####################################
