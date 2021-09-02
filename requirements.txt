@@ -1,4 +1,5 @@
-scipy==1.5.3
 numpy==1.17.4
+opencv_python==4.5.3.56
+scipy==1.5.3
 pandas==1.1.3
-pickle5==0.0.11
+filterpy==1.4.5
