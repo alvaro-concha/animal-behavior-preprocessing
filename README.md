@@ -26,13 +26,12 @@ In this way, it makes it easier to keep files up-to-date, when tweaking differen
 The build-system also figures out which tasks can be run in parallel, if a multi-core CPU is available.
 
 
- <figure>
-  <img align="center" 
+ 
+<img align="center" 
     src="module_imports.svg"
     alt="Animal Behavior Analysis Logo"
-    width="100%" />
-  <figcaption> Modules in `animal-behavior-preprocessing` and their import structure. An arrow from `module_a` to `module_b` indicates that `module_a` is importing `module_b`. The `dodo` module is the main module of the pipeline, and is named this way to conform with `doit` naming conventions. </figcaption>
-</figure> 
+    width="100%"
+    Modules in `animal-behavior-preprocessing` and their import structure. An arrow from `module_a` to `module_b` indicates that `module_a` is importing `module_b`. The `dodo` module is the main module of the pipeline, and is named this way to conform with `doit` naming conventions. />
 
 ## Instalation
 
