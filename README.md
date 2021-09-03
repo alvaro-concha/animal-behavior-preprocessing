@@ -10,20 +10,35 @@ Neurobiology of Movement Lab, Medical Physics Dept, Bariloche Atomic Centre (CAB
 ## Introduction
 
 Animal Behavior Preprocessing (ABP) is a Python repository to preprocess animal behavior data.
-It works on the output spreadsheets from video-tracking of animal body parts with LEAP or DeepLabCut.
-It applies a Median Filter, an Ensemble Kalman Filter, transforms data to joint angles and computes their Morlet Wavelet Spectra.
+It works on the output spreadsheets from video-tracking of animal body parts with LEAP or DeepLabCut motion-tracking softwares.
+It then applies a median filter, an ensemble Kalman filter, transforms data to joint angles and computes their Morlet wavelet spectra.
+Thus, it extracts the featuresto be fed into adimensionality reduction algorithm, like UMAP or t-SNE, in order to produce behavioral maps (ethograms).
+This kind of workflows, to analyse animal behavior, were mostly initially developped by [Berman GJ's Lab](https://royalsocietypublishing.org/doi/10.1098/rsif.2014.0672).
 
 This repository was designed to be integrated with [Animal Behavior Analysis (ABA)](https://github.com/alvaro-concha/animal-behavior-analysis).
 ABP is the preparatory step, before using ABA.
-Both repositories are configured and optimized to for analysing mouse behavior data in an acceleratint rotarod task, recorded using a frontal and a back camera, simultaneously.
+Both repositories are configured and optimized for analysing mouse behavior motion-tracking data, during the performance of accelerating rotarod tasks, recorded using both a frontal and a back camera, simultaneously.
 
-ABP implements several tasks using `pydoit`
+ABP is an implementation of a pipeline that runs several tasks.
+To do this, we use [`doit`](https://pydoit.org/), a Python package that functions as a build-system tool, [similar to `make`](https://blogs.aalto.fi/marijn/2016/02/25/doit-a-python-alternative-to-make/), but with Python syntax!.
+This build-system watches and keeps track of changes in files ("inputs and outputs", also known as "dependencies and targets", in build-system lingo) used by each task in the pipeline.
+In this way, it makes it easier to keep files up-to-date, when tweaking different aspects of the pipeline (like modifying parameters, adding or removing tasks, etc.).
+The build-system also figures out which tasks can be run in parallel, if a multi-core CPU is available.
 
-<img align="right"
-    src="logo.svg"
+
+ <figure>
+  <img align="center" 
+    src="module_imports.svg"
     alt="Animal Behavior Analysis Logo"
-    width="30%" />
+    width="100%" />
+  <figcaption> Modules in `animal-behavior-preprocessing` and their import structure. An arrow from `module_a` to `module_b` indicates that `module_a` is importing `module_b`. The `dodo` module is the main module of the pipeline, and is named this way to conform with `doit` naming conventions. </figcaption>
+</figure> 
 
+## Instalation
+
+    git clone
+    pip3 install -e git+http://github.com/alvaro-concha/animal-behavior-preprocessing.git#egg=AnimalBehaviorPreprocessing
+    
 
 Shablona is a template project for small scientific python projects. The
 recommendations we make here follow the standards and conventions of much of
