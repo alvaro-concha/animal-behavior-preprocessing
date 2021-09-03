@@ -30,8 +30,8 @@ The build-system also figures out which tasks can be run in parallel, if a multi
 <img align="center" 
     src="module_imports.svg"
     alt="Animal Behavior Analysis Logo"
-    width="100%"
-    Modules in `animal-behavior-preprocessing` and their import structure. An arrow from `module_a` to `module_b` indicates that `module_a` is importing `module_b`. The `dodo` module is the main module of the pipeline, and is named this way to conform with `doit` naming conventions. />
+    width="100%" />
+Modules in `animal-behavior-preprocessing` and their import structure. An arrow from `module_a` to `module_b` indicates that `module_a` is importing `module_b`. The `dodo` module is the main module of the pipeline, and is named this way to conform with `doit` naming conventions.
 
 ## Instalation
 
