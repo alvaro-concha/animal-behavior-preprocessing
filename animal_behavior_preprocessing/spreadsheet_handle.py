@@ -29,7 +29,7 @@ def get_spreadsheet_path(spreadsheets, key, target_pickle_path):
         Path of target pickle to save
     """
     for file in spreadsheets:
-        if re.search(config.spr_pattern.format(*key), file.as_posix()):
+        if re.search(config.SPR_PATTERN.format(*key), file.as_posix()):
             write_pickle(file, target_pickle_path)
             return
 
@@ -55,9 +55,9 @@ def get_coordinates_likelihoods_from_spreadsheet_path(file):
     ValueError
         If the file is not a CSV or an Excel compatible spreadsheet.
     """
-    kwargs = {"skiprows": config.spr_skiprows}
-    xy_kwargs = {**kwargs, "usecols": config.spr_xy_columns}
-    lh_kwargs = {**kwargs, "usecols": config.spr_lh_columns}
+    kwargs = {"skiprows": config.SPR_SKIPROWS}
+    xy_kwargs = {**kwargs, "usecols": config.SPR_XY_COLUMNS}
+    lh_kwargs = {**kwargs, "usecols": config.SPR_LH_COLUMNS}
     try:
         xys = pd.read_csv(file, **xy_kwargs).dropna(how="all").to_numpy()
         lhs = pd.read_csv(file, **lh_kwargs).dropna(how="all").to_numpy()
@@ -85,10 +85,10 @@ def get_median_filter(xys, lhs):
     med_lhs : ndarray
         Filtered likelihoods
     """
-    med_xys = medfilt(xys, kernel_size=(config.med_win, 1)).reshape(
+    med_xys = medfilt(xys, kernel_size=(config.MED_WIN, 1)).reshape(
         (xys.shape[0], -1, 2)
     )
-    med_lhs = medfilt(lhs, kernel_size=(config.med_win, 1))
+    med_lhs = medfilt(lhs, kernel_size=(config.MED_WIN, 1))
     return med_xys, med_lhs
 
 
@@ -106,9 +106,9 @@ def get_perspective_matrix(xys):
     perspective_matrix : ndarray
         Perspective transform matrix
     """
-    corner_source = np.median(xys[:, config.corner_marker_idx, :], axis=0)
+    corner_source = np.median(xys[:, config.CORNER_MARKER_IDX, :], axis=0)
     perspective_matrix = getPerspectiveTransform(
-        np.float32(corner_source), np.float32(config.corner_destination)
+        np.float32(corner_source), np.float32(config.CORNER_DESTINATION)
     )
     return perspective_matrix
 

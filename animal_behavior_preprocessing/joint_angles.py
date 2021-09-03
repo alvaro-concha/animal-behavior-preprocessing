@@ -47,7 +47,7 @@ def get_extended_xys(xys):
     """
     extended_xys = np.zeros((xys.shape[0], xys.shape[1] + 1, xys.shape[2]))
     extended_xys[:, : xys.shape[1], :] = xys
-    extended_xys[:, xys.shape[1], :] = [config.rotarod_height / 2.0, 0.0]
+    extended_xys[:, xys.shape[1], :] = [config.ROTAROD_HEIGHT / 2.0, 0.0]
     return extended_xys
 
 
@@ -67,7 +67,7 @@ def get_joint_angles(xys):
     """
     extended_xys = get_extended_xys(xys)
     angs = []
-    for idx in config.angle_marker_idx:
+    for idx in config.ANGLE_MARKER_IDX:
         angs.append(
             get_single_joint_angle(
                 extended_xys[:, idx[0], :],

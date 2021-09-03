@@ -30,10 +30,10 @@ def get_combined_cameras_coordinates_likelihoods(
     """
     num_frames = np.minimum(len(front_xys), len(back_xys))
     xys = front_xys[:num_frames]
-    xys[:, config.back_marker_idx] = back_xys[:num_frames, config.back_marker_idx]
-    xys[:, config.corner_marker_idx] = config.corner_destination
+    xys[:, config.BACK_MARKER_IDX] = back_xys[:num_frames, config.BACK_MARKER_IDX]
+    xys[:, config.CORNER_MARKER_IDX] = config.CORNER_DESTINATION
     lhs = front_lhs[:num_frames]
-    lhs[:, config.back_marker_idx] = back_lhs[:num_frames, config.back_marker_idx]
+    lhs[:, config.BACK_MARKER_IDX] = back_lhs[:num_frames, config.BACK_MARKER_IDX]
     return xys, lhs
 
 
@@ -84,25 +84,25 @@ def get_single_coordinate_kalman_filter(coordinate, variance):
     """
     x_0 = np.pad(
         [coordinate[0]],
-        (0, config.kal_dim_x - config.kal_dim_z),
+        (0, config.KAL_DIM_X - config.KAL_DIM_Z),
         "constant",
         constant_values=1.0,
     )
     ensemble_kalman_filter = EnsembleKalmanFilter(
         x=x_0,
-        P=config.kal_P,
-        dim_z=config.kal_dim_z,
-        dt=config.kal_dt,
-        N=config.kal_N_ensemble,
-        hx=config.kal_hx,
-        fx=config.kal_fx,
+        P=config.KAL_P,
+        dim_z=config.KAL_DIM_Z,
+        dt=config.KAL_DT,
+        N=config.KAL_N_ENSEMBLE,
+        hx=config.KAL_HX,
+        fx=config.KAL_FX,
     )
-    ensemble_kalman_filter.Q = config.kal_Q
+    ensemble_kalman_filter.Q = config.KAL_Q
     filtered_coordinate = []
     for coord, var in zip(coordinate, variance):
         ensemble_kalman_filter.predict()
         ensemble_kalman_filter.update(z=[coord], R=var)
-        filtered_coordinate.append(config.kal_hx(ensemble_kalman_filter.x))
+        filtered_coordinate.append(config.KAL_HX(ensemble_kalman_filter.x))
     return np.array(filtered_coordinate)
 
 
@@ -122,10 +122,10 @@ def get_parallel_kalman_filter(xys, lhs):
     xys : ndarray
         Kalman filtered X-Y coordinates
     """
-    coordinates = xys[:, config.body_marker_idx].reshape((xys.shape[0], -1))
+    coordinates = xys[:, config.BODY_MARKER_IDX].reshape((xys.shape[0], -1))
     variances = np.repeat(lhs, 2, axis=1)
     variances = (
-        config.kal_sigma_measurement / (variances + config.kal_epsilon_lh)
+        config.KAL_SIGMA_MEASUREMENT / (variances + config.KAL_EPSILON_LH)
     ) ** 2
     with mp.Pool(mp.cpu_count()) as pool:
         results = pool.starmap(
@@ -134,7 +134,7 @@ def get_parallel_kalman_filter(xys, lhs):
         )
         pool.close()
         pool.join()
-    xys[:, config.body_marker_idx] = np.column_stack(results).reshape(
+    xys[:, config.BODY_MARKER_IDX] = np.column_stack(results).reshape(
         (xys.shape[0], -1, 2)
     )
     return xys

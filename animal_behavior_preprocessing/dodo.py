@@ -1,7 +1,17 @@
-"""Dodo go brrr.
+"""Animal Behavior Preprocessing.
 
-BRRRR.
+Tasks
+-----
+    Spreadsheet handling.
+    Median filter and perspective transform matrix.
+    Kalman filter of combined front and back camera's motion tracking.
+    Computes joint angles and their statistics.
+    Computes joint angles global statistics.
+    Computes Morlet wavelet spectra of whitened joint angles.
 """
+import sys
+import multiprocessing as mp
+from doit.doit_cmd import DoitMain
 import config_dodo
 from spreadsheet_handle import get_spreadsheet_path, get_median_filter_perspective
 from kalman_filter import get_kalman_filter
@@ -16,12 +26,12 @@ def task_get_spreadsheet_path():
     Save spreadsheet paths.
     """
     spreadsheets = [
-        file for file in config_dodo.spr_path.glob("**/*") if file.is_file()
+        file for file in config_dodo.SPR_PATH.glob("**/*") if file.is_file()
     ]
-    for key in config_dodo.preprocess_key_list:
-        name = config_dodo.preprocess_subject_name.format(*key)
+    for key in config_dodo.PREPROCESS_KEY_LIST:
+        name = config_dodo.PREPROCESS_SUBJECT_NAME.format(*key)
         pickle_end = name + ".pickle"
-        target_pickle_path = config_dodo.met_path / f"spr_path_{pickle_end}"
+        target_pickle_path = config_dodo.MET_PATH / f"SPR_PATH_{pickle_end}"
         yield {
             "name": name,
             "targets": [target_pickle_path],
@@ -41,14 +51,14 @@ def task_get_median_filter_perspective():
     Compute perspective transform matrices of front and back cameras.
     Saves results.
     """
-    for key in config_dodo.preprocess_key_list:
-        name = config_dodo.preprocess_subject_name.format(*key)
+    for key in config_dodo.PREPROCESS_KEY_LIST:
+        name = config_dodo.PREPROCESS_SUBJECT_NAME.format(*key)
         pickle_end = name + ".pickle"
-        dep_pickle_path = config_dodo.met_path / f"spr_path_{pickle_end}"
+        dep_pickle_path = config_dodo.MET_PATH / f"SPR_PATH_{pickle_end}"
         target_pickle_paths = {
-            "med_xy": config_dodo.med_path / f"med_xy_{pickle_end}",
-            "med_lh": config_dodo.med_path / f"med_lh_{pickle_end}",
-            "perspective": config_dodo.med_path / f"perspective_{pickle_end}",
+            "med_xy": config_dodo.MED_PATH / f"med_xy_{pickle_end}",
+            "med_lh": config_dodo.MED_PATH / f"med_lh_{pickle_end}",
+            "perspective": config_dodo.MED_PATH / f"perspective_{pickle_end}",
         }
         yield {
             "name": name,
@@ -70,23 +80,23 @@ def task_get_kalman_filter():
     Apply parallelized Ensemble Kalman filter to combined coordinates.
     Saves results.
     """
-    for key in config_dodo.key_list:
-        name = config_dodo.subject_name.format(*key)
+    for key in config_dodo.KEY_LIST:
+        name = config_dodo.SUBJECT_NAME.format(*key)
         pickle_end = name + ".pickle"
-        front_name = config_dodo.preprocess_subject_name.format(*key, 1)
+        front_name = config_dodo.PREPROCESS_SUBJECT_NAME.format(*key, 1)
         front_pickle_end = front_name + ".pickle"
-        back_name = config_dodo.preprocess_subject_name.format(*key, 2)
+        back_name = config_dodo.PREPROCESS_SUBJECT_NAME.format(*key, 2)
         back_pickle_end = back_name + ".pickle"
         dep_pickle_paths = {
-            "front_med_xy": config_dodo.med_path / f"med_xy_{front_pickle_end}",
-            "front_med_lh": config_dodo.med_path / f"med_lh_{front_pickle_end}",
-            "front_perspective": config_dodo.med_path
+            "front_med_xy": config_dodo.MED_PATH / f"med_xy_{front_pickle_end}",
+            "front_med_lh": config_dodo.MED_PATH / f"med_lh_{front_pickle_end}",
+            "front_perspective": config_dodo.MED_PATH
             / f"perspective_{front_pickle_end}",
-            "back_med_xy": config_dodo.med_path / f"med_xy_{back_pickle_end}",
-            "back_med_lh": config_dodo.med_path / f"med_lh_{back_pickle_end}",
-            "back_perspective": config_dodo.med_path / f"perspective_{back_pickle_end}",
+            "back_med_xy": config_dodo.MED_PATH / f"med_xy_{back_pickle_end}",
+            "back_med_lh": config_dodo.MED_PATH / f"med_lh_{back_pickle_end}",
+            "back_perspective": config_dodo.MED_PATH / f"perspective_{back_pickle_end}",
         }
-        target_pickle_path = config_dodo.kal_path / f"kal_xy_{pickle_end}"
+        target_pickle_path = config_dodo.KAL_PATH / f"kal_xy_{pickle_end}"
         yield {
             "name": name,
             "file_dep": list(dep_pickle_paths.values()),
@@ -108,13 +118,13 @@ def task_get_joint_angles_statistics():
     Computes number of frames, means and variances for each single angle.
     Saves results.
     """
-    for key in config_dodo.key_list:
-        name = config_dodo.subject_name.format(*key)
+    for key in config_dodo.KEY_LIST:
+        name = config_dodo.SUBJECT_NAME.format(*key)
         pickle_end = name + ".pickle"
-        dep_pickle_path = config_dodo.kal_path / f"kal_xy_{pickle_end}"
+        dep_pickle_path = config_dodo.KAL_PATH / f"kal_xy_{pickle_end}"
         target_pickle_paths = {
-            "ang": config_dodo.ang_path / f"ang_{pickle_end}",
-            "stat": config_dodo.ang_path / f"stat_{pickle_end}",
+            "ang": config_dodo.ANG_PATH / f"ang_{pickle_end}",
+            "stat": config_dodo.ANG_PATH / f"stat_{pickle_end}",
         }
         yield {
             "name": name,
@@ -136,11 +146,11 @@ def task_get_global_statistics():
     Saves results.
     """
     dep_pickle_paths = []
-    for key in config_dodo.key_list:
-        name = config_dodo.subject_name.format(*key)
+    for key in config_dodo.KEY_LIST:
+        name = config_dodo.SUBJECT_NAME.format(*key)
         pickle_end = name + ".pickle"
-        dep_pickle_paths.append(config_dodo.ang_path / f"stat_{pickle_end}")
-    target_pickle_path = config_dodo.ang_path / "stat_global.pickle"
+        dep_pickle_paths.append(config_dodo.ANG_PATH / f"stat_{pickle_end}")
+    target_pickle_path = config_dodo.ANG_PATH / "stat_global.pickle"
     return {
         "file_dep": dep_pickle_paths,
         "targets": [target_pickle_path],
@@ -160,14 +170,14 @@ def task_get_wavelet_spectra():
     Computes parallelized Morlet wavelet transform.
     Saves results.
     """
-    for key in config_dodo.key_list:
-        name = config_dodo.subject_name.format(*key)
+    for key in config_dodo.KEY_LIST:
+        name = config_dodo.SUBJECT_NAME.format(*key)
         pickle_end = name + ".pickle"
         dep_pickle_paths = {
-            "ang": config_dodo.ang_path / f"ang_{pickle_end}",
-            "stat": config_dodo.ang_path / "stat_global.pickle",
+            "ang": config_dodo.ANG_PATH / f"ang_{pickle_end}",
+            "stat": config_dodo.ANG_PATH / "stat_global.pickle",
         }
-        target_pickle_path = config_dodo.wav_path / f"wav_{pickle_end}"
+        target_pickle_path = config_dodo.WAV_PATH / f"wav_{pickle_end}"
         yield {
             "name": name,
             "file_dep": list(dep_pickle_paths.values()),
@@ -181,9 +191,10 @@ def task_get_wavelet_spectra():
         }
 
 
-# ##################################### MAIN #####################################
+def main():
+    """Run pipeline as a python script, using parallel computing."""
+    sys.exit(DoitMain().run([f"-n {mp.cpu_count()}"]))
 
-# if __name__ == "__main__":
-#     import doit
 
-#     doit.run(globals())
+if __name__ == "__main__":
+    main()

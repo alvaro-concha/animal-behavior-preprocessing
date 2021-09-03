@@ -49,7 +49,7 @@ def get_single_angle_wavelet_spectra(ang):
     Written by Kanishk Jain (kanishkbjain@gmail.com).
     """
     len_ang = len(ang)
-    wav = np.zeros((config.wav_num_channels, len_ang))
+    wav = np.zeros((config.WAV_NUM_CHANNELS, len_ang))
 
     if not len_ang // 2:
         ang = np.concatenate((ang, [0]), axis=0)
@@ -63,11 +63,11 @@ def get_single_angle_wavelet_spectra(ang):
     )
     modified_len_ang = len_ang
     len_ang = len(ang)
-    scales = (config.wav_omega_0 + np.sqrt(2 + config.wav_omega_0 ** 2)) / (
-        4 * np.pi * config.wav_f_channels
+    scales = (config.WAV_OMEGA_0 + np.sqrt(2 + config.WAV_OMEGA_0 ** 2)) / (
+        4 * np.pi * config.WAV_F_CHANNELS
     )
     omega_values = (
-        2 * np.pi * np.arange(-len_ang / 2, len_ang / 2) / (len_ang * config.wav_dt)
+        2 * np.pi * np.arange(-len_ang / 2, len_ang / 2) / (len_ang * config.WAV_DT)
     )
 
     fourier_transform = np.fft.fft(ang)
@@ -82,9 +82,9 @@ def get_single_angle_wavelet_spectra(ang):
             (modified_len_ang / 2), (modified_len_ang / 2 + modified_len_ang)
         ).astype(int)
 
-    for i in range(config.wav_num_channels):
+    for i in range(config.WAV_NUM_CHANNELS):
         m_values = (np.pi ** (-0.25)) * np.exp(
-            -0.5 * (-omega_values * scales[i] - config.wav_omega_0) ** 2
+            -0.5 * (-omega_values * scales[i] - config.WAV_OMEGA_0) ** 2
         )
         q_values = np.fft.ifft(m_values * fourier_transform) * np.sqrt(scales[i])
         q_values = q_values[idx]
@@ -92,7 +92,7 @@ def get_single_angle_wavelet_spectra(ang):
             np.abs(q_values)
             * (np.pi ** -0.25)
             * np.exp(
-                0.25 * (config.wav_omega_0 - np.sqrt(config.wav_omega_0 ** 2 + 2)) ** 2
+                0.25 * (config.WAV_OMEGA_0 - np.sqrt(config.WAV_OMEGA_0 ** 2 + 2)) ** 2
             )
             / np.sqrt(2 * scales[i])
         )

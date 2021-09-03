@@ -1,93 +1,105 @@
-"""Mouse behavior analysis configuration parameters.
+"""Mouse behavior preprocessing modeules configuration parameters.
 
-Control and modify all parameters in a single place.
-
-File System
------------
-{x}_path : list of pathlib.Path
-    Path to a specific folder(x)
-
-Data Handling
--------------
-{mouse, day, trial, cam}_list : list of ints
-    List of mouse IDs, day, trial or camera numbers
-spr_pattern : str
-    Formattable string for regular expression lookup in spreadsheet names
-preprocess_key_list : list of tuples
-    List of keys at the beginning of preprocessing
-key_list : list of tuples
-    List of keys at the end of preprocessing
-pickle_name : str
-        Name of pickled file to save
-save_folder : str
-        Name of folder to save pickle into
-
-...
-
-Subjetct Data
--------------
+Control and modify parameters in the modules of the pipeline.
 
 Spreadsheet
 -----------
+SPR_PATTERN : str
+    Formattable string: regular expression lookup in spreadsheet names
+SPR_SKIPROWS : int
+    Number of rows to skip when reading spreadsheet
+SPR_XY_COLUMNS : array_like
+    Indices of columns containing X-Y coordinates
+SPR_LH_COLUMNS : array_like
+    Indices of columns containing likelihoods
 
 Motion Tracking
 ---------------
+IDX_MARKER_DICT : dict
+    Dictionary of {int: str}: mapping marker indices to their names
+{FRONT, BACK}_MARKER_IDX : array_like
+    Body-part marker indices appearing clearly in front or back camera
+{BODY, CORNER}_MARKER_IDX : array_like
+    Body-part or rotarod corner marker indices
+ROTAROD_{HEIGHT, WIDTH} : float
+    Rotarod height and width, as viewed in camera recordings
+CORNER_DESTINATION : array_like
+    Ideal locations of the four rotarod corners. Coordinates reference frame
 
 Median Filter
 -------------
+MED_WIN : int
+    Odd integer: median filter window size
 
 Kalman Filter
 -------------
+KAL_SIGMA_MEASUREMENT : float
+    Kalman filter external meauserement error
+KAL_EPSILON_LH : float
+    Tiny number: avoid dividing by zero when converting likelihoods to errors
+KAL_DT : float
+    Kalman filter time step size
+KAL_N_ENSEMBLE : int
+    Size of ensemble
+KAL_PROCESS_VARIANCE : float
+    Kalman filter internal process variance
+KAL_DIM_Z : int
+    Dimension of external meauserement (set to 1 to use parallel Kalman filter)
+KAL_DIM_X : int
+    Dimension of the internal model of the Kalman filter
+KAL_P : array_like
+    Initial covariance matrix of the internal model of the Kalman filter
+KAL_F : array_like
+    Transition matrix of the internal model of the Kalman filter
+KAL_HX : function
+    Measurement function
+KAL_FX : function
+    Transition function
+KAL_Q : array_like
+    Kalman filter internal process covariance matrix
 
-...
+Joint Angles
+------------
+ANGLE_MARKER_IDX : array_like
+    Array of thruples of marker indices that define an angle
 
+Wavelet Spectra
+---------------
+WAV_F_SAMPLING : float
+    Sampling frequency of motion tracking, in Hz
+WAV_F_MIN : float
+    Minimum frequency channel value, in Hz
+WAV_F_MIN_MID : float
+    Minimum frequency channel value, in higher resolution midband, in Hz
+WAV_F_MAX_MID : float
+    Maximum frequency channel value, in higher resolution midband, in Hz
+WAV_F_MAX : float
+    Maximum frequency channel value, in Hz. Set to Nyquist frequency
+WAV_NUM_CHANNELS_{LOW, MID, HIGH} : int
+    Number of frequency channels in low, mid and high frequency bands
+WAV_F_CHANNELS : array_like
+    Step-wise generated, dyadically spaced total frequency channels
+WAV_NUM_CHANNELS : int
+    Number of total frequency channels
+WAV_OMEGA_0 : int
+    Morlet wavelet omega_0 parameter. Related to number of observed cycles
+WAV_DT : float
+    Wavelet transform time step value. Set to inverse of sampling frequency
 """
-from pathlib import Path
-from itertools import product
 import numpy as np
 from filterpy.common import Q_discrete_white_noise
 from dyadic_frequencies import get_dyadic_frequencies
 
-################################# File System ##################################
-################################# Config Dodo ##################################
-
-abs_path = Path(__file__).parent.parent.parent.absolute()
-spr_path = abs_path / "Data/Spreadsheets"  # Original source spreadsheets
-med_path = abs_path / "Data/Positions/Median"  # xys, lhs and perspective matrices
-kal_path = abs_path / "Data/Positions/Kalman"  # xys
-ang_path = abs_path / "Data/Features/Angles"  # Joint angles from xys
-wav_path = abs_path / "Data/Features/Wavelets"  # Wavelet spectra from joint angles
-emb_path = abs_path / "Data/Embeddings"  # UMAP embeddings
-met_path = abs_path / "Data/Metadata"  # Spreadsheet paths
-vid_path = abs_path / "Data/Videos"  # Rotarod videos
-ani_path = abs_path / "Animations"  # Output animations
-fig_path = abs_path / "Figures"  # Output figures
-
-################################ Subjetct Data #################################
-################################# Config Dodo ##################################
-
-mouse_list = [295, 297, 298, 329, 330]
-# mouse_list = [295]
-day_list = [1, 2, 3, 4, 5]
-# day_list = [1, 5]
-trial_list = [1, 2, 3, 4, 5]
-# trial_list = [1]
-cam_list = [1, 2]  # Front: 1, Back: 2
-preprocess_key_list = list(product(mouse_list, day_list, trial_list, cam_list))
-preprocess_subject_name = "M{}D{}T{}C{}"
-key_list = list(product(mouse_list, day_list, trial_list))
-subject_name = "M{}D{}T{}"
-
 ################################# Spreadsheet ##################################
 
-spr_pattern = r"^(?=.*ID{})(?=.*Dia{})(?=.*trial{})(?=.*{}DLC)"
-spr_skiprows = 2
-spr_xy_columns = [idx for i in range(1, 49, 3) for idx in [i, i + 1]]
-spr_lh_columns = range(3, 49, 3)
+SPR_PATTERN = r"^(?=.*ID{})(?=.*Dia{})(?=.*trial{})(?=.*{}DLC)"
+SPR_SKIPROWS = 2
+SPR_XY_COLUMNS = [idx for i in range(1, 49, 3) for idx in [i, i + 1]]
+SPR_LH_COLUMNS = range(3, 49, 3)
 
 ############################### Motion Tracking ################################
 
-idx_marker_dict = {
+IDX_MARKER_DICT = {
     0: "left hind leg",
     1: "right hind leg",
     2: "base tail",
@@ -105,53 +117,52 @@ idx_marker_dict = {
     14: "bottom right",
     15: "bottom left",
 }
-corner_marker_idx = np.arange(12, 16)
-rotarod_height = 57.0  # mm
-rotarod_width = 30.0  # mm
-corner_destination = np.array(
+FRONT_MARKER_IDX = np.arange(7, 12)
+BACK_MARKER_IDX = np.arange(7)
+BODY_MARKER_IDX = np.arange(12)
+CORNER_MARKER_IDX = np.arange(12, 16)
+ROTAROD_HEIGHT = 57.0  # mm
+ROTAROD_WIDTH = 30.0  # mm
+CORNER_DESTINATION = np.array(
     [
-        [rotarod_height, rotarod_width],
-        [0.0, rotarod_width],
-        [rotarod_height, 0.0],
+        [ROTAROD_HEIGHT, ROTAROD_WIDTH],
+        [0.0, ROTAROD_WIDTH],
+        [ROTAROD_HEIGHT, 0.0],
         [0.0, 0.0],
     ]
 )
-front_marker_idx = np.arange(7, 12)
-back_marker_idx = np.arange(7)
-body_marker_idx = np.arange(12)
 
 ################################ Median Filter #################################
 
-med_win = 11
+MED_WIN = 11
 
 ################################ Kalman Filter #################################
 
-kal_sigma_measurement = 0.1  # mm
-kal_epsilon_lh = 1e-9  # add to avoid dividing by zero likelihood
-kal_dt = 1
-kal_N_ensemble = 10
-kal_process_variance = 0.01  # mm squared
-kal_dim_z = 1  # one coordinate at a time
-kal_dim_x = 2  # 2, 3 or 4
-
-kal_P = np.eye(kal_dim_x) * 100.0
-kal_F = np.eye(kal_dim_x)
-for n in range(0, kal_dim_x - kal_dim_z):
-    idx = np.arange(kal_dim_x - kal_dim_z - n, dtype=int)
-    kal_F[idx, (n + 1) * kal_dim_z + idx] = 1.0 / np.math.factorial(n + 1)
-kal_hx = lambda x: x[0]
-kal_fx = lambda x, dt: np.dot(kal_F, x)
-kal_Q = Q_discrete_white_noise(
-    dim=kal_dim_x,
-    dt=kal_dt,
-    var=kal_process_variance,
-    block_size=kal_dim_z,
+KAL_SIGMA_MEASUREMENT = 0.1  # mm
+KAL_EPSILON_LH = 1e-9  # add to avoid dividing by zero likelihood
+KAL_DT = 1
+KAL_N_ENSEMBLE = 10
+KAL_PROCESS_VARIANCE = 0.01  # mm squared
+KAL_DIM_Z = 1  # one coordinate at a time
+KAL_DIM_X = 2  # 2, 3 or 4
+KAL_P = np.eye(KAL_DIM_X) * 100.0
+KAL_F = np.eye(KAL_DIM_X)
+for n in range(0, KAL_DIM_X - KAL_DIM_Z):
+    idx = np.arange(KAL_DIM_X - KAL_DIM_Z - n, dtype=int)
+    KAL_F[idx, (n + 1) * KAL_DIM_Z + idx] = 1.0 / np.math.factorial(n + 1)
+KAL_HX = lambda x: x[0]
+KAL_FX = lambda x, dt: np.dot(KAL_F, x)
+KAL_Q = Q_discrete_white_noise(
+    dim=KAL_DIM_X,
+    dt=KAL_DT,
+    var=KAL_PROCESS_VARIANCE,
+    block_size=KAL_DIM_Z,
     order_by_dim=False,
 )
 
 ################################ Joint Angles ##################################
 
-angle_marker_idx = [
+ANGLE_MARKER_IDX = [
     [7, 4, 8],
     [4, 8, 7],
     [8, 7, 4],
@@ -184,21 +195,21 @@ angle_marker_idx = [
 
 ############################### Wavelet Spectra ################################
 
-wav_f_sampling = 100.0
-wav_f_min = 0.1
-wav_f_min_mid = 0.5
-wav_f_max_mid = 4.0
-wav_f_max = wav_f_sampling / 2.0
-wav_num_channels_mid = 20
-wav_num_channels_low = 3
-wav_num_channels_high = 5
-wav_f_channels = np.concatenate(
+WAV_F_SAMPLING = 100.0
+WAV_F_MIN = 0.1
+WAV_F_MIN_MID = 0.5
+WAV_F_MAX_MID = 4.0
+WAV_F_MAX = WAV_F_SAMPLING / 2.0
+WAV_NUM_CHANNELS_LOW = 3
+WAV_NUM_CHANNELS_MID = 20
+WAV_NUM_CHANNELS_HIGH = 5
+WAV_F_CHANNELS = np.concatenate(
     [
-        get_dyadic_frequencies(wav_f_min, wav_f_min_mid, wav_num_channels_low)[:-1],
-        get_dyadic_frequencies(wav_f_min_mid, wav_f_max_mid, wav_num_channels_mid),
-        get_dyadic_frequencies(wav_f_max_mid, wav_f_max, wav_num_channels_high)[1:],
+        get_dyadic_frequencies(WAV_F_MIN, WAV_F_MIN_MID, WAV_NUM_CHANNELS_LOW)[:-1],
+        get_dyadic_frequencies(WAV_F_MIN_MID, WAV_F_MAX_MID, WAV_NUM_CHANNELS_MID),
+        get_dyadic_frequencies(WAV_F_MAX_MID, WAV_F_MAX, WAV_NUM_CHANNELS_HIGH)[1:],
     ]
 )
-wav_num_channels = len(wav_f_channels)
-wav_omega_0 = 10.0
-wav_dt = 1.0 / wav_f_sampling
+WAV_NUM_CHANNELS = len(WAV_F_CHANNELS)
+WAV_OMEGA_0 = 10.0
+WAV_DT = 1.0 / WAV_F_SAMPLING
