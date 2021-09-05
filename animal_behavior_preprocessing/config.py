@@ -22,7 +22,7 @@ IDX_MARKER_DICT : dict
 {BODY, CORNER}_MARKER_IDX : array_like
     Body-part or rotarod corner marker indices
 ROTAROD_{HEIGHT, WIDTH} : float
-    Rotarod height and width, as viewed in camera recordings
+    Rotarod height and width in mm, modelling it as a rectangle
 CORNER_DESTINATION : array_like
     Ideal locations of the four rotarod corners. Coordinates reference frame
 
@@ -121,8 +121,8 @@ FRONT_MARKER_IDX = np.arange(7, 12)
 BACK_MARKER_IDX = np.arange(7)
 BODY_MARKER_IDX = np.arange(12)
 CORNER_MARKER_IDX = np.arange(12, 16)
-ROTAROD_HEIGHT = 57.0  # mm
-ROTAROD_WIDTH = 30.0  # mm
+ROTAROD_HEIGHT = 57.0  # in mm
+ROTAROD_WIDTH = 30.0  # in mm
 CORNER_DESTINATION = np.array(
     [
         [ROTAROD_HEIGHT, ROTAROD_WIDTH],

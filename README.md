@@ -25,7 +25,7 @@ This build-system watches and keeps track of changes in files ("inputs and outpu
 In this way, it makes it easier to keep files up-to-date, when tweaking different aspects of the pipeline (like modifying parameters, adding or removing tasks, etc.).
 The build-system also figures out which tasks can be run in parallel, if a multi-core CPU is available.
 
-
+Add link to shablona template. Make some remarks about it. This repository is inspred by/follows this template
  
 <img align="center" 
     src="module_imports.svg"
