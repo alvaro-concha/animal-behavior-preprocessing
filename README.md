@@ -7,6 +7,12 @@
 
 Neurobiology of Movement Lab, Medical Physics Dept, Bariloche Atomic Centre (CAB), CNEA
 
+## Add collaborators to a private repo
+
+https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-user-account/managing-access-to-your-personal-repositories/inviting-collaborators-to-a-personal-repository
+
+https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories/adding-outside-collaborators-to-repositories-in-your-organization
+
 ## Introduction
 
 Animal Behavior Preprocessing (ABP) is a Python repository to preprocess animal behavior data.

@@ -12,11 +12,11 @@ Tasks
 import sys
 import multiprocessing as mp
 from doit.doit_cmd import DoitMain
-import config_dodo
 from spreadsheet_handle import get_spreadsheet_path, get_median_filter_perspective
 from kalman_filter import get_kalman_filter
 from joint_angles import get_joint_angles_statistics, get_global_statistics
 from wavelet_spectra import get_wavelet_spectra
+import config_dodo
 
 
 def task_get_spreadsheet_path():

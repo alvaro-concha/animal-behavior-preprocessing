@@ -96,7 +96,7 @@ def get_single_angle_wavelet_spectra(ang):
             )
             / np.sqrt(2 * scales[i])
         )
-    return wav
+    return wav.T
 
 
 def get_parallel_wavelet_spectra(angs):
@@ -121,7 +121,7 @@ def get_parallel_wavelet_spectra(angs):
         )
         pool.close()
         pool.join()
-    wavs = np.column_stack(wavs).T
+    wavs = np.column_stack(wavs)
     return wavs
 
 
