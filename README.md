@@ -48,7 +48,7 @@ The project has the following structure:
       |- README.md
       |- requirements.txt
       |- setup.py
-      |- animal\_behavior\_preprocessing/
+      |- animal_behavior_preprocessing/
          |- config.py
          |- config_dodo.py
          |- dodo.py
