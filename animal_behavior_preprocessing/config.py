@@ -21,8 +21,8 @@ IDX_MARKER_DICT : dict
     Body-part marker indices appearing clearly in front or back camera
 {BODY, CORNER}_MARKER_IDX : array_like
     Body-part or rotarod corner marker indices
-ROTAROD_{HEIGHT, WIDTH} : float
-    Rotarod height and width in mm, modelling it as a rectangle
+ROTAROD_{WIDTH, HEIGHT} : float
+    Rotarod height and width in mm, as seen in the video
 CORNER_DESTINATION : array_like
     Ideal locations of the four rotarod corners. Coordinates reference frame
 
@@ -58,10 +58,63 @@ KAL_FX : function
 KAL_Q : array_like
     Kalman filter internal process covariance matrix
 
+Quantile Filter
+---------------
+QNT_KEEP : float
+    Proportion (between 0 and 1) to keep when filtering
+QNT_X_SWITCH_KEEP : float
+    Proportion to keep when filtering markers that suffer horizontal switching
+QNT_X_SWITCH_MARKER_IDX : list
+    List of marker indices that suffer from horizontal switching
+QNT_EXPANSION : float 
+    Factor to increase quantile bands
+QNT_WIN : int
+    Odd integer: quantile filter window size
+QNT_TRIM_WIN : int
+    Odd integer: quantile filter window size for trimming
+QNT_TRIM_CUT : float
+    Proportion (between 0 and 1) quantile bands to trim
+
+Smoothed Nose and Center of Mass
+--------------------------------
+SMOOTH_TRIM_WIN : int
+    Odd integer: nose and center window size for trimming
+SMOOTH_TRIM_CUT : float
+    Proportion (between 0 and 1) quantile bands to trim
+
+Step Metrics
+------------
+STEP_MARKER_DICT : dict
+    Dictionary of {int: str}: mapping of hindpaw marker indices to their names
+
+Steps and Poses
+---------------
+STEP_EVENTS_TIMES : str
+    Name of the column containing step events times
+STEP_FEATURES : list
+    List of features to extract from step events
+POSE_FEATURES_CM_IDX : int
+    Index of the column containing the center of mass
+POSE_FEATURES_HINDPAWS_IDX : list
+    List of indices of the columns containing the hindpaw marker coordinates
+POSE_FEATURES_OTHER_IDX : list
+    List of indices of the columns containing other marker coordinates
+
+Subsample Indices
+-----------------
+SUBSAMPLE_RANDOM_SEED : int
+    Random seed for subsampling
+SUBSAMPLE_BETWEEN_STEPS : int
+    Number of frames to cover between steps in the subsampling
+
 Joint Angles
 ------------
-ANGLE_MARKER_IDX : array_like
+ANG_MARKER_IDX : array_like
     Array of thruples of marker indices that define an angle
+ANG_TRIM_WIN : int
+    Odd integer: angle window size for trimming
+ANG_TRIM_CUT : float
+    Proportion (between 0 and 1) quantile bands to trim
 
 Wavelet Spectra
 ---------------
@@ -69,10 +122,6 @@ WAV_F_SAMPLING : float
     Sampling frequency of motion tracking, in Hz
 WAV_F_MIN : float
     Minimum frequency channel value, in Hz
-WAV_F_MIN_MID : float
-    Minimum frequency channel value, in higher resolution midband, in Hz
-WAV_F_MAX_MID : float
-    Maximum frequency channel value, in higher resolution midband, in Hz
 WAV_F_MAX : float
     Maximum frequency channel value, in Hz. Set to Nyquist frequency
 WAV_NUM_CHANNELS_{LOW, MID, HIGH} : int
@@ -100,15 +149,15 @@ SPR_LH_COLUMNS = range(3, 49, 3)
 ############################### Motion Tracking ################################
 
 IDX_MARKER_DICT = {
-    0: "left hind leg",
-    1: "right hind leg",
+    0: "left hind paw",
+    1: "right hind paw",
     2: "base tail",
     3: "middle tail",
     4: "back",
     5: "left back",
     6: "right back",
-    7: "left front leg",
-    8: "right front leg",
+    7: "left front paw",
+    8: "right front paw",
     9: "nose",
     10: "left ear",
     11: "right ear",
@@ -116,21 +165,47 @@ IDX_MARKER_DICT = {
     13: "top left",
     14: "bottom right",
     15: "bottom left",
+    16: "smoothed nose",
+    17: "center of mass",
 }
 FRONT_MARKER_IDX = np.arange(7, 12)
 BACK_MARKER_IDX = np.arange(7)
 BODY_MARKER_IDX = np.arange(12)
 CORNER_MARKER_IDX = np.arange(12, 16)
-ROTAROD_HEIGHT = 57.0  # in mm
-ROTAROD_WIDTH = 30.0  # in mm
+EXTRA_MARKER_IDX = np.arange(16, 18)
+CM_MARKER_IDX = [2, 4, 5, 6]
+NOSE_MARKER_IDX = [9]
+ROTAROD_WIDTH = 57.0  # in mm
+ROTAROD_HEIGHT = 30.0  # in mm
 CORNER_DESTINATION = np.array(
     [
-        [ROTAROD_HEIGHT, ROTAROD_WIDTH],
-        [0.0, ROTAROD_WIDTH],
-        [ROTAROD_HEIGHT, 0.0],
+        [ROTAROD_WIDTH, ROTAROD_HEIGHT],
+        [0.0, ROTAROD_HEIGHT],
+        [ROTAROD_WIDTH, 0.0],
         [0.0, 0.0],
     ]
 )
+CORNER_SEEDS_BATCH1_CAM1 = {
+    12: [500, 200],
+    13: [100, 200],
+    14: [500, 450],
+    15: [100, 450],
+}
+CORNER_SEEDS_BATCH1_CAM2 = {
+    12: [425, 150],
+    13: [25, 150],
+    14: [425, 450],
+    15: [25, 450],
+}
+CORNER_SEEDS_BATCH2 = {
+    12: [525, 140],
+    13: [125, 140],
+    14: [525, 440],
+    15: [125, 440],
+}
+SEED_RADIUS = 200
+SEED_RADIUS_SENSITIVE = 150
+SEED_RADIUS_BIG = 250
 
 ################################ Median Filter #################################
 
@@ -160,56 +235,64 @@ KAL_Q = Q_discrete_white_noise(
     order_by_dim=False,
 )
 
+############################### Quantile Filter ################################
+
+QNT_KEEP = 0.75
+QNT_X_SWITCH_KEEP = 0.5
+QNT_X_SWITCH_MARKER_IDX = [0, 1, 5, 6, 7, 8, 10, 11]
+QNT_EXPANSION = 2.5
+QNT_WIN = 3001
+QNT_TRIM_WIN = 7
+QNT_TRIM_CUT = 0.25
+
+###################### Smoothed Nose and Center of Mass ########################
+
+SMOOTH_TRIM_WIN = 101
+SMOOTH_TRIM_CUT = 0.1
+
+################################ Step Metrics ##################################
+
+STEP_MARKER_DICT = {
+    0: "left",  # left hind paw
+    1: "right",  # right hind paw
+}
+
+############################## Steps and Poses #################################
+
+STEP_EVENTS_TIMES = "t_dy_max"
+STEP_FEATURES = ["y1", "y2", "amp", "dy_max", "abs_delta_phi", "freq"]
+POSE_FEATURES_CM_IDX = [17]
+POSE_FEATURES_HINDPAWS_IDX = [0, 1]
+POSE_FEATURES_OTHER_IDX = [2, 4, 16]
+
+############################# Subsample Indices ################################
+
+SUBSAMPLE_RANDOM_SEED = 42
+SUBSAMPLE_BETWEEN_STEPS = 2  # covers around 7 to 11% of each trial
+
 ################################ Joint Angles ##################################
 
-ANGLE_MARKER_IDX = [
-    [7, 4, 8],
-    [4, 8, 7],
-    [8, 7, 4],
-    [14, 9, 15],
-    [9, 15, 14],
-    [15, 14, 9],
-    [10, 9, 11],
-    [9, 11, 4],
-    [11, 4, 10],
-    [4, 10, 9],
-    [16, 9, 4],
-    [9, 4, 16],
-    [4, 16, 9],
-    [2, 0, 5],
-    [0, 5, 4],
-    [5, 4, 6],
-    [4, 6, 1],
-    [6, 1, 2],
-    [1, 2, 0],
-    [4, 3, 2],
-    [2, 4, 3],
-    [3, 2, 4],
-    [2, 4, 16],
-    [4, 16, 2],
-    [16, 2, 4],
-    [14, 2, 15],
-    [2, 15, 14],
-    [15, 14, 2],
+ANG_MARKER_IDX = [
+    [4, 17, 0],  # left hindpaw
+    [17, 0, 4],  # left hindpaw
+    [4, 17, 1],  # right hindpaw
+    [17, 1, 4],  # right hindpaw
+    [0, 17, 1],  # cm hindpaws
+    [17, 2, 3],  # tail
+    [2, 17, 4],  # back
+    [17, 4, 2],  # back
+    [4, 16, 17],  # nose
+    [17, 4, 16],  # nose
 ]
+ANG_TRIM_WIN = 9
+ANG_TRIM_CUT = 0.25
 
 ############################### Wavelet Spectra ################################
 
 WAV_F_SAMPLING = 100.0
 WAV_F_MIN = 0.1
-WAV_F_MIN_MID = 0.5
-WAV_F_MAX_MID = 4.0
-WAV_F_MAX = WAV_F_SAMPLING / 2.0
-WAV_NUM_CHANNELS_LOW = 3
-WAV_NUM_CHANNELS_MID = 20
-WAV_NUM_CHANNELS_HIGH = 5
-WAV_F_CHANNELS = np.concatenate(
-    [
-        get_dyadic_frequencies(WAV_F_MIN, WAV_F_MIN_MID, WAV_NUM_CHANNELS_LOW)[:-1],
-        get_dyadic_frequencies(WAV_F_MIN_MID, WAV_F_MAX_MID, WAV_NUM_CHANNELS_MID),
-        get_dyadic_frequencies(WAV_F_MAX_MID, WAV_F_MAX, WAV_NUM_CHANNELS_HIGH)[1:],
-    ]
-)
-WAV_NUM_CHANNELS = len(WAV_F_CHANNELS)
+WAV_F_MAX = 10.0
+WAV_NUM_CHANNELS = 50
+WAV_F_CHANNELS = get_dyadic_frequencies(WAV_F_MIN, WAV_F_MAX, WAV_NUM_CHANNELS)
 WAV_OMEGA_0 = 10.0
 WAV_DT = 1.0 / WAV_F_SAMPLING

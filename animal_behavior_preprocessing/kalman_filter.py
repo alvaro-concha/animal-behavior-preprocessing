@@ -1,14 +1,20 @@
 """Kalman filter of combined front and back camera's motion tracking.
 
 Combine front and back body-part markers, in the same perspective.
-Apply parallelized Ensemble Kalman filter to combined coordinates. Saves results.
+Apply parallelized Ensemble Kalman filter to combined coordinates. Save results.
 """
 import multiprocessing as mp
 import numpy as np
+from scipy.stats import iqr
 from filterpy.kalman import EnsembleKalmanFilter
 from cv2 import perspectiveTransform
 from utilities import read_pickle, write_pickle
 import config
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_context("paper", font_scale=2)
+sns.set_style("white")
 
 
 def get_combined_cameras_coordinates_likelihoods(
@@ -140,7 +146,33 @@ def get_parallel_kalman_filter(xys, lhs):
     return xys
 
 
-def get_kalman_filter(dep_pickle_paths, target_pickle_path):
+def plot_kalman_filter(name, xys, path_fig_x, path_fig_y):
+    """Plots Kalman filter markers' quality control."""
+    scale = iqr(xys, axis=0, nan_policy="omit", keepdims=True)
+    loc = np.median(xys, axis=0, keepdims=True)
+    xys = 0.5 * (xys - loc) / scale
+    time = np.arange(len(xys)) / 60.0 / config.WAV_F_SAMPLING
+    plt.figure(figsize=(50, 7))
+    for idx in range(xys.shape[1]):
+        plt.plot(time, xys[:, idx, 0] + idx, alpha=0.9)
+    plt.xlabel(r"$t$ (min)")
+    plt.ylabel(r"$x$")
+    plt.ylim(-2, xys.shape[1] + 1)
+    plt.title(name)
+    plt.savefig(path_fig_x, bbox_inches="tight")
+    plt.close()
+    plt.figure(figsize=(50, 7))
+    for idx in range(xys.shape[1]):
+        plt.plot(time, xys[:, idx, 1] + idx, alpha=0.9)
+    plt.xlabel(r"$t$ (min)")
+    plt.ylabel(r"$y$")
+    plt.ylim(-2, xys.shape[1] + 1)
+    plt.title(name)
+    plt.savefig(path_fig_y, bbox_inches="tight")
+    plt.close()
+
+
+def get_kalman_filter(name, dep_pickle_paths, target_pickle_paths):
     """
     Works using median filtered and reshaped X-Y coordinates and likelihoods.
     Combines front and back cameras, using the same perspective.
@@ -150,9 +182,15 @@ def get_kalman_filter(dep_pickle_paths, target_pickle_path):
     ----------
     dep_pickle_paths : dict of pathlib.Path
         Paths of dependency pickle files to read
-    target_pickle_path : pathlib.Path
-        Path of target pickle file to save
+    target_pickle_paths : pathlib.Path
+        Paths of target pickle files to save
     """
     xys, lhs = get_same_perspective_coordinates_likelihoods(dep_pickle_paths)
     xys = get_parallel_kalman_filter(xys, lhs)
-    write_pickle(xys, target_pickle_path)
+    write_pickle(xys, target_pickle_paths["kal_xy"])
+    plot_kalman_filter(
+        name,
+        xys[:, config.BODY_MARKER_IDX, :],
+        target_pickle_paths["fig_kal_x"],
+        target_pickle_paths["fig_kal_y"],
+    )

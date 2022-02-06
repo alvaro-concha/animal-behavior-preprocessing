@@ -1,32 +1,13 @@
 """Computes Morlet wavelet spectra of whitened joint angles.
 
 Whitens joint angles using global mean and variance.
-Computes parallelized Morlet wavelet transform. Saves results.
+Computes parallelized Morlet wavelet transform. Save results.
 """
 import multiprocessing as mp
 import numpy as np
+from sklearn.decomposition import IncrementalPCA
 from utilities import read_pickle, write_pickle
 import config
-
-
-def get_whitened_angles(angs, mean, var):
-    """
-    Whitens joint angles using global mean and variance.
-
-    Parameters
-    ----------
-    angs : ndarray
-        Array of joint angles
-    mean, var : ndarray
-        Global mean and variance of the joint angles
-
-    Returns
-    -------
-    whitened_angs : ndarray
-        Whitened joint angles
-    """
-    whitened_angs = (angs - mean) / np.sqrt(var)
-    return whitened_angs
 
 
 def get_single_angle_wavelet_spectra(ang):
@@ -46,7 +27,7 @@ def get_single_angle_wavelet_spectra(ang):
     Notes
     -----
     Acknowledgements to Gordon Berman's Lab MotionMapper.
-    Written by Kanishk Jain (kanishkbjain@gmail.com).
+    Inspired by Kanishk Jain (kanishkbjain@gmail.com).
     """
     len_ang = len(ang)
     wav = np.zeros((config.WAV_NUM_CHANNELS, len_ang))
@@ -125,7 +106,7 @@ def get_parallel_wavelet_spectra(angs):
     return wavs
 
 
-def get_wavelet_spectra(dep_pickle_paths, target_pickle_path):
+def get_wavelet_spectra(path_scaler_ang, path_ang, target_pickle_path):
     """
     Computes wavelet spectra of whitened joint angles.
 
@@ -136,8 +117,19 @@ def get_wavelet_spectra(dep_pickle_paths, target_pickle_path):
     target_pickle_path : pathlib.Path
         Path of target pickle file to save
     """
-    angs = read_pickle(dep_pickle_paths["ang"])
-    (_, mean, var) = read_pickle(dep_pickle_paths["stat"])
-    whitened_angs = get_whitened_angles(angs, mean, var)
-    wavs = get_parallel_wavelet_spectra(whitened_angs)
+    scaler_angs = read_pickle(path_scaler_ang)
+    angs = read_pickle(path_ang)
+    print("Shape of read joint angles:", angs.shape)
+    angs = scaler_angs.transform(angs)
+    wavs = get_parallel_wavelet_spectra(angs)
+    print("Shape of created wavelet spectra:", wavs.shape)
     write_pickle(wavs, target_pickle_path)
+
+
+def get_pca_fit_wavelet_spectra(dep_pickle_paths, target_pickle_path):
+    """Fit incremental PCA to wavelet spectra features."""
+    pca_wavs = IncrementalPCA(copy=False)
+    for path in dep_pickle_paths["wav"]:
+        pca_wavs.partial_fit(read_pickle(path))
+    del dep_pickle_paths["wav"]
+    write_pickle(pca_wavs, target_pickle_path)
