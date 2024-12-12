@@ -1,9 +1,10 @@
+# animal-behavior-preprocessing
+
 <img align="right"
     src="logo.svg"
     alt="Animal Behavior Analysis Logo"
-    width="30%" />
-
-# animal-behavior-preprocessing
+    width="15%" />
+<br>
 
 Neurobiology of Movement Lab, Medical Physics Department, Bariloche Atomic Centre, CNEA
 
